@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/royleo35/go-generics/algorithm/sort"
 	"github.com/royleo35/go-generics/gmap"
-	"github.com/royleo35/go-generics/hputil"
 	"github.com/royleo35/go-generics/tools"
 	"math/rand"
+	"reflect"
 	"testing"
 )
 
@@ -74,10 +74,10 @@ func TestFunction(t *testing.T) {
 	// iter keys values
 	k1 := hm.Keys()
 	k2 := gmap.Keys(m)
-	tools.Assert(hputil.DeepEqual(sort.SortByCopyDef(k1), sort.SortByCopyDef(k2)))
+	tools.Assert(reflect.DeepEqual(sort.SortByCopyDef(k1), sort.SortByCopyDef(k2)))
 	v1 := hm.Values()
 	v2 := gmap.Values(m)
-	tools.Assert(hputil.DeepEqual(sort.SortByCopyDef(v1), sort.SortByCopyDef(v2)))
+	tools.Assert(reflect.DeepEqual(sort.SortByCopyDef(v1), sort.SortByCopyDef(v2)))
 
 	// contain each other
 	for it := hm.First(); it != nil; it = it.Next() {

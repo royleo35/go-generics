@@ -142,8 +142,8 @@ func (t *RBTree[T]) Len() int {
 	return t.len
 }
 
-func (t *TreeNode[T]) Value() T {
-	return t.val
+func (n *TreeNode[T]) Value() T {
+	return n.val
 }
 
 func (t *RBTree[T]) newNode(val T) *TreeNode[T] {

@@ -93,6 +93,15 @@ func NewDefHashMap[K comparable, V any](size int) *HashMap[K, V] {
 	return NewHashMap[K, V](size, defCmp[K])
 }
 
+func NewWithValues[K comparable, V, T any](s []T, f func(e T) (K, V)) *HashMap[K, V] {
+	m := NewDefHashMap[K, V](len(s))
+	for _, v := range s {
+		key, val := f(v)
+		m.Set(key, val)
+	}
+	return m
+}
+
 func allocAux[T any](size int) []*glist.List[T] {
 	res := make([]*glist.List[T], size)
 	for i := range res {
@@ -283,7 +292,7 @@ func (hm *HashMap[K, V]) Size() int {
 
 type Iter[K, V any] struct {
 	hm *HashMap[K, V]
-	// 用于处理边界情况，第一次迭代和旧bucket到新bucket切换时从currSlot开始扫描，其他情况从currSlot开始扫描
+	// 用于处理边界情况，第一次迭代和旧bucket到新bucket切换时从currSlot开始扫描，其他情况从currSlot+1开始扫描
 	iterSlot      bool
 	currSlot      int
 	currElem      *glist.Element[*pair[K, V]]

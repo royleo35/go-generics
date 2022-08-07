@@ -1,7 +1,6 @@
 package gslice
 
 import (
-	"github.com/royleo35/go-generics/hputil"
 	"github.com/royleo35/go-generics/tools"
 	"reflect"
 	strconv "strconv"
@@ -105,7 +104,7 @@ func TestReverse(t *testing.T) {
 	res := ReverseByCopy(a)
 	tools.Assert(reflect.DeepEqual(want, res))
 	Reverse(a)
-	tools.Assert(hputil.DeepEqual(want, a))
+	tools.Assert(reflect.DeepEqual(want, a))
 }
 
 func TestToTreeMapValues(t *testing.T) {

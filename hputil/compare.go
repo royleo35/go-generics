@@ -32,14 +32,3 @@ func unpackEface(i interface{}) *emptyInterface {
 	e := (*emptyInterface)(unsafe.Pointer(&i))
 	return e
 }
-
-func DeepEqual(obj1, obj2 interface{}) bool {
-	if obj1 == nil || obj2 == nil {
-		return obj1 == obj2
-	}
-	//if reflect.TypeOf(obj1) != reflect.TypeOf(obj2) {
-	//	return false
-	//}
-	fn := unpackEface(&obj1).typ.equal
-	return fn(unsafe.Pointer(&obj1), unsafe.Pointer(&obj2))
-}
