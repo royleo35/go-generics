@@ -10,6 +10,7 @@ package rbtree
 
 import (
 	"fmt"
+	"github.com/royleo35/go-generics/internal"
 	"github.com/royleo35/go-generics/tools"
 	"github.com/royleo35/go-generics/types"
 )
@@ -55,6 +56,10 @@ func NewRBTree[T any](compare func(v1, v2 T) int) *RBTree[T] {
 	t.dummy.tree = t
 	t.root = &t.dummy
 	return t
+}
+
+func NewDef[T any]() *RBTree[T] {
+	return NewRBTree[T](internal.MemCmpValue[T])
 }
 
 func NewRBTreeWitchNumber[T types.Number]() *RBTree[T] {

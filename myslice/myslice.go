@@ -2,6 +2,7 @@ package myslice
 
 import (
 	"fmt"
+	"github.com/royleo35/go-generics/internal"
 	"unsafe"
 )
 
@@ -15,22 +16,6 @@ type Slice[T any] struct {
 func assert(cond bool, msg string) {
 	if !cond {
 		panic(msg)
-	}
-}
-
-func sizeof[T any]() int {
-	var dummy T
-	return int(unsafe.Sizeof(dummy))
-}
-
-func memcopy(dst, src unsafe.Pointer, bytes int) {
-	// assert(bytes >= 0, "bytes must >= 0")
-	l8 := bytes >> 3
-	for i := 0; i < l8; i++ {
-		*(*uint64)(unsafe.Pointer(uintptr(dst) + uintptr(i*8))) = *(*uint64)(unsafe.Pointer(uintptr(src) + uintptr(i*8)))
-	}
-	for i := 0; i < bytes&7; i++ {
-		*(*uint8)(unsafe.Pointer(uintptr(dst) + uintptr(i))) = *(*uint8)(unsafe.Pointer(uintptr(src) + uintptr(i)))
 	}
 }
 
@@ -57,23 +42,18 @@ func nextCap(n int) int {
 	return int(float64(n) * 1.25)
 }
 
-func malloc(bytes int) unsafe.Pointer {
-	data := make([]byte, bytes)
-	return unsafe.Pointer(&data[0])
-}
-
 func New[T any](_len, _cap int) *Slice[T] {
 	assert(_len >= 0 && _cap >= 0 && _cap >= _len, "len or cap param error")
 	s := &Slice[T]{
 		data:     nil,
 		len:      _len,
 		cap:      _cap,
-		elemSize: sizeof[T](),
+		elemSize: internal.SizeOf[T](),
 	}
 	if _cap == 0 {
 		return s
 	}
-	s.data = malloc(_cap * s.elemSize)
+	s.data = internal.Malloc(_cap * s.elemSize)
 	return s
 }
 
@@ -82,7 +62,7 @@ func NewWithValues[T any](e ...T) *Slice[T] {
 	if len(e) == 0 {
 		return s
 	}
-	memcopy(s.ptrOf(0), unsafe.Pointer(&e[0]), len(e)*s.elemSize)
+	internal.MemCopy(s.ptrOf(0), unsafe.Pointer(&e[0]), len(e)*s.elemSize)
 	return s
 }
 
@@ -120,17 +100,17 @@ func (s *Slice[T]) Append(e ...T) *Slice[T] {
 	}
 	needGrowUp := s.len+l > s.cap
 	if !needGrowUp {
-		memcopy(s.ptrOf(s.len), unsafe.Pointer(&e[0]), l*s.elemSize)
+		internal.MemCopy(s.ptrOf(s.len), unsafe.Pointer(&e[0]), l*s.elemSize)
 		s.len += l
 		return s
 	}
 	newS := New[T](0, nextCap(s.len+l))
 	// copy old
 	if s.len != 0 {
-		memcopy(newS.ptrOf(0), s.ptrOf(0), s.len*s.elemSize)
+		internal.MemCopy(newS.ptrOf(0), s.ptrOf(0), s.len*s.elemSize)
 	}
 	// copy new
-	memcopy(newS.ptrOf(s.len), unsafe.Pointer(&e[0]), l*s.elemSize)
+	internal.MemCopy(newS.ptrOf(s.len), unsafe.Pointer(&e[0]), l*s.elemSize)
 	newS.len = s.len + l
 	s.shadow(newS)
 	return newS
@@ -182,7 +162,7 @@ func (s *Slice[T]) bytes() []byte {
 
 func bytes[T any](s []T) []byte {
 	ss := *(*Slice[T])(unsafe.Pointer(&s))
-	elemSize := sizeof[T]()
+	elemSize := internal.SizeOf[T]()
 	res := &Slice[T]{
 		data: ss.data,
 		len:  ss.len * elemSize,
