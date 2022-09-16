@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"github.com/royleo35/go-generics/types"
 	"unsafe"
 )
 
@@ -31,4 +32,12 @@ func Dereference[T any](p *T) (val T) {
 // PtrCast 指针强转，不安全，转换失败会panic
 func PtrCast[T1 any, T2 any](p *T1) *T2 {
 	return (*T2)(unsafe.Pointer(p))
+}
+
+func Less[T types.BuiltIn](e1, e2 T) bool {
+	return e1 < e2
+}
+
+func Greater[T types.BuiltIn](e1, e2 T) bool {
+	return e1 > e2
 }
