@@ -1,6 +1,7 @@
 package hashmap
 
 import (
+	"fmt"
 	"github.com/royleo35/go-generics/glist"
 	"github.com/royleo35/go-generics/tools"
 	"unsafe"
@@ -14,7 +15,7 @@ type pair[K, V any] struct {
 type HashMap[K, V any] struct {
 	size      int
 	bucketIdx int
-	cmp       func(k1, k2 K) bool
+	fmtKey    func(K) string // 用户提供将key转为string的函数,同时用于hash和比较
 	oldBucket []*glist.List[*pair[K, V]]
 	newBucket []*glist.List[*pair[K, V]]
 	// rehash进度, 下一个需要rehash的bucket索引， -1 代表没在rehash
@@ -39,8 +40,8 @@ const (
 	onceRehashSlot = 3
 )
 
-func defCmp[K comparable](k1, k2 K) bool {
-	return k1 == k2
+func defFmtKey[K comparable](k K) string {
+	return fmt.Sprintf("%v", k)
 }
 
 func findBuckSizeIdx(size int) int {
@@ -74,7 +75,7 @@ func nextIdx(idx int) int {
 	return idx + 1
 }
 
-func NewHashMap[K, V any](size int, cmp func(k1, k2 K) bool) *HashMap[K, V] {
+func NewHashMap[K, V any](size int, fmtKey func(K) string) *HashMap[K, V] {
 	if size < 0 {
 		panic("size must >= 0")
 	}
@@ -82,7 +83,7 @@ func NewHashMap[K, V any](size int, cmp func(k1, k2 K) bool) *HashMap[K, V] {
 	m := &HashMap[K, V]{
 		size:         0,
 		bucketIdx:    bucketIdx,
-		cmp:          cmp,
+		fmtKey:       fmtKey,
 		oldBucket:    allocAux[*pair[K, V]](bucketSize[bucketIdx]),
 		rehashingIdx: -1,
 	}
@@ -90,7 +91,7 @@ func NewHashMap[K, V any](size int, cmp func(k1, k2 K) bool) *HashMap[K, V] {
 }
 
 func NewDefHashMap[K comparable, V any](size int) *HashMap[K, V] {
-	return NewHashMap[K, V](size, defCmp[K])
+	return NewHashMap[K, V](size, defFmtKey[K])
 }
 
 func NewWithValues[K comparable, V, T any](s []T, f func(e T) (K, V)) *HashMap[K, V] {
@@ -110,21 +111,13 @@ func allocAux[T any](size int) []*glist.List[T] {
 	return res
 }
 
-func hashIdx[K any](key K, bucket int) int {
-	if bucket == 0 {
-		return 0
-	}
-	idx := hash(key) % uint64(bucket)
-	return int(idx)
-}
-
 func rotateShiftRight(val uint64, bits int) uint64 {
 	return (val >> bits) | (val << (64 - bits))
 }
 
-func hash[K any](key K) uint64 {
+func hash(key string) uint64 {
 	res := uint64(0)
-	l := int(unsafe.Sizeof(key))
+	l := len(key)
 	p := unsafe.Pointer(&key)
 	l8 := l >> 3
 	data := *(*[]byte)(unsafe.Pointer(uintptr(p) + uintptr(l8<<3)))
@@ -136,6 +129,14 @@ func hash[K any](key K) uint64 {
 		res |= rotateShiftRight(uint64(data[i]), 4)
 	}
 	return res
+}
+
+func (hm *HashMap[K, V]) hashIdx(key K, bucket int) int {
+	if bucket == 0 {
+		return 0
+	}
+	idx := hash(hm.fmtKey(key)) % uint64(bucket)
+	return int(idx)
 }
 
 func (hm *HashMap[K, V]) BucketCount() int {
@@ -222,16 +223,16 @@ func (hm *HashMap[K, V]) findElem(key K, old bool) *glist.Element[*pair[K, V]] {
 	)
 	if old {
 		b = hm.oldBucket
-		idx = hashIdx(key, hm.BucketCount())
+		idx = hm.hashIdx(key, hm.BucketCount())
 	} else {
 		b = hm.newBucket
-		idx = hashIdx(key, hm.rehashBucketCount())
+		idx = hm.hashIdx(key, hm.rehashBucketCount())
 	}
 	if len(b) == 0 || b[idx] == nil {
 		return nil
 	}
 	for e := b[idx].Front(); e != nil; e = e.Next() {
-		if hm.cmp(key, e.Value.key) {
+		if hm.fmtKey(key) == hm.fmtKey(e.Value.key) {
 			return e
 		}
 	}
@@ -261,11 +262,11 @@ func (hm *HashMap[K, V]) Get(key K) (val V, ok bool) {
 
 func (hm *HashMap[K, V]) set(key K, val V, old bool) {
 	if old {
-		idx := hashIdx(key, hm.BucketCount())
+		idx := hm.hashIdx(key, hm.BucketCount())
 		slot := hm.oldBucket[idx]
 		slot.PushFront(&pair[K, V]{key, val})
 	} else {
-		idx := hashIdx(key, hm.rehashBucketCount())
+		idx := hm.hashIdx(key, hm.rehashBucketCount())
 		slot := hm.newBucket[idx]
 		slot.PushFront(&pair[K, V]{key, val})
 	}
@@ -274,6 +275,7 @@ func (hm *HashMap[K, V]) set(key K, val V, old bool) {
 func (hm *HashMap[K, V]) Set(key K, val V) {
 	e := hm.getElem(key)
 	if e != nil {
+		e.Value.key = key
 		e.Value.val = val
 		return
 	}
